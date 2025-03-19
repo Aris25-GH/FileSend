@@ -100,17 +100,17 @@
             oneTimeCode = Math.floor(100000 + Math.random() * 900000);
             expiration = Date.now() + 120000;
             subject = document.getElementById('subject').value;
-            sessionStorage.setItem('oneTimeCode', oneTimeCode);
-            sessionStorage.setItem('expiration', expiration);
-            sessionStorage.setItem('subject', subject);
+            localStorage.setItem('oneTimeCode', oneTimeCode);
+            localStorage.setItem('expiration', expiration);
+            localStorage.setItem('subject', subject);
             document.getElementById('codeDisplay').innerHTML = `Share this code: <strong>${oneTimeCode}</strong> (Expires in 2 min)`;
         }
 
         function validateCode() {
             const enteredCode = document.getElementById('inputCode').value;
-            const storedCode = sessionStorage.getItem('oneTimeCode');
-            const storedExpiration = parseInt(sessionStorage.getItem('expiration'));
-            const storedSubject = sessionStorage.getItem('subject');
+            const storedCode = localStorage.getItem('oneTimeCode');
+            const storedExpiration = parseInt(localStorage.getItem('expiration'));
+            const storedSubject = localStorage.getItem('subject');
 
             if (enteredCode == storedCode && Date.now() < storedExpiration) {
                 document.getElementById('subjectDisplay').innerHTML = `Subject: ${storedSubject}`;
