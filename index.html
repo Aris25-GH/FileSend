@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P File Transfer with PeerJS</title>
+    <title>P2P File Transfer with PeerJS (Secure Over HTTPS)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.3.1/peerjs.min.js"></script>
     <script>
         let peer;
@@ -15,7 +15,13 @@
             peer = new Peer(undefined, {
                 host: '0.peerjs.com',
                 secure: true,
-                port: 443
+                port: 443,
+                config: {
+                    iceServers: [
+                        { urls: "stun:stun.l.google.com:19302" }, // Google's STUN server
+                        { urls: "turn:relay.backups.cz", username: "webrtc", credential: "webrtc" } // Free TURN server
+                    ]
+                }
             });
             
             peer.on('open', id => {
@@ -59,7 +65,8 @@
                         link.href = URL.createObjectURL(fileBlob);
                         link.download = fileMetadata.name;
                         link.click();
-                        document.getElementById("fileStatus").innerText = "File received successfully!";
+                        
+                        document.getElementById("fileStatus").innerText = `File received successfully! Location: Default downloads folder`;
                     } else {
                         fileMetadata = JSON.parse(data);
                     }
@@ -107,7 +114,7 @@
     </script>
 </head>
 <body onload="initializePeer()">
-    <h2>P2P File Transfer with PeerJS</h2>
+    <h2>P2P File Transfer with PeerJS (Secure Over HTTPS)</h2>
     
     <div>
         <h3>Sender</h3>
