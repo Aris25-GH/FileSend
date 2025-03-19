@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P File Transfer with PeerJS (Chunked Transfer)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.3.1/peerjs.min.js"></script>
+    <script>
+        let peer;
+        let conn;
+        let receivedChunks = [];
+        let fileMetadata = {};
+        let chunkSize = 65536; // 64KB chunks for large file support
+
+        function initializePeer() {
+            peer = new Peer(undefined, {
+                host: '0.peerjs.com',
+                secure: true,
+                port: 443,
+                config: {
+                    iceServers: [
+                        { urls: "stun:stun.l.google.com:19302" },
+                        { urls: "turn:relay.backups.cz", username: "webrtc", credential: "webrtc" }
+                    ]
+                }
+            });
+            
+            peer.on('open', id => {
+                document.getElementById("peerId").innerText = `Your Peer ID: ${id}`;
+            });
+
+            peer.on('connection', connection => {
+                conn = connection;
+                setupReceiver();
+                document.getElementById("connectionStatus").innerText = "Connected! Ready to receive file.";
+            });
+        }
+
+        function connectToPeer() {
+            const remotePeerId = document.getElementById("remotePeerId").value;
+            if (!remotePeerId) {
+                alert("Please enter a valid Peer ID");
+                return;
+            }
+            conn = peer.connect(remotePeerId);
+            
+            conn.on('open', () => {
+                document.getElementById("connectionStatus").innerText = "Connected to receiver! Ready to send file.";
+            });
+            
+            setupSender();
+        }
+
+        function setupSender() {
+            conn.on('data', data => {
+                console.log("Received from receiver: ", data);
+            });
+        }
+
+        function setupReceiver() {
+            conn.on('data', data => {
+                if (typeof data === "string") {
+                    if (data === "END") {
+                        const fileBlob = new Blob(receivedChunks, { type: fileMetadata.type });
+                        const link = document.createElement("a");
+                        link.href = URL.createObjectURL(fileBlob);
+                        link.download = fileMetadata.name;
+                        link.click();
+                        
+                        document.getElementById("fileStatus").innerText = `File received successfully! Location: Default downloads folder`;
+                    } else {
+                        fileMetadata = JSON.parse(data);
+                    }
+                } else {
+                    receivedChunks.push(data);
+                }
+            });
+        }
+
+        function sendFile() {
+            if (!conn || !conn.open) {
+                alert("Connection is not established yet!");
+                return;
+            }
+            const file = document.getElementById("fileInput").files[0];
+            if (!file) return alert("Select a file first");
+
+            fileMetadata = { name: file.name, type: file.type, size: file.size };
+            conn.send(JSON.stringify(fileMetadata));
+            document.getElementById("fileStatus").innerText = "Sending file...";
+
+            let offset = 0;
+            function sendNextChunk() {
+                if (offset < file.size) {
+                    const slice = file.slice(offset, offset + chunkSize);
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        conn.send(reader.result);
+                        offset += chunkSize;
+                        sendNextChunk();
+                    };
+                    reader.readAsArrayBuffer(slice);
+                } else {
+                    conn.send("END");
+                    document.getElementById("fileStatus").innerText = "File sent successfully!";
+                }
+            }
+            sendNextChunk();
+        }
+    </script>
+</head>
+<body onload="initializePeer()">
+    <h2>P2P File Transfer with PeerJS (Chunked Transfer)</h2>
+    
+    <div>
+        <h3>Sender</h3>
+        <p id="peerId">Generating Peer ID...</p>
+        <input type="text" id="remotePeerId" placeholder="Enter Receiver's Peer ID">
+        <button onclick="connectToPeer()">Connect</button>
+        <p id="connectionStatus">Not connected</p>
+        <input type="file" id="fileInput">
+        <button onclick="sendFile()">Send File</button>
+        <p id="fileStatus"></p>
+    </div>
+    
+    <div>
+        <h3>Receiver</h3>
+        <p>Share your Peer ID with the sender.</p>
+    </div>
+</body>
+</html>
