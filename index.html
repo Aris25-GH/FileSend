@@ -25,18 +25,28 @@
             peer.on('connection', connection => {
                 conn = connection;
                 setupReceiver();
+                document.getElementById("connectionStatus").innerText = "Connected! Ready to receive file.";
             });
         }
 
         function connectToPeer() {
             const remotePeerId = document.getElementById("remotePeerId").value;
+            if (!remotePeerId) {
+                alert("Please enter a valid Peer ID");
+                return;
+            }
             conn = peer.connect(remotePeerId);
+            
+            conn.on('open', () => {
+                document.getElementById("connectionStatus").innerText = "Connected to receiver! Ready to send file.";
+            });
+            
             setupSender();
         }
 
         function setupSender() {
-            conn.on('open', () => {
-                console.log("Connected to receiver");
+            conn.on('data', data => {
+                console.log("Received from receiver: ", data);
             });
         }
 
@@ -49,6 +59,7 @@
                         link.href = URL.createObjectURL(fileBlob);
                         link.download = fileMetadata.name;
                         link.click();
+                        document.getElementById("fileStatus").innerText = "File received successfully!";
                     } else {
                         fileMetadata = JSON.parse(data);
                     }
@@ -59,11 +70,16 @@
         }
 
         function sendFile() {
+            if (!conn || !conn.open) {
+                alert("Connection is not established yet!");
+                return;
+            }
             const file = document.getElementById("fileInput").files[0];
             if (!file) return alert("Select a file first");
 
             fileMetadata = { name: file.name, type: file.type, size: file.size };
             conn.send(JSON.stringify(fileMetadata));
+            document.getElementById("fileStatus").innerText = "Sending file...";
 
             const chunkSize = 16384;
             const reader = new FileReader();
@@ -77,6 +93,7 @@
                         readNextChunk();
                     } else {
                         conn.send("END");
+                        document.getElementById("fileStatus").innerText = "File sent successfully!";
                     }
                 }
             };
@@ -97,8 +114,10 @@
         <p id="peerId">Generating Peer ID...</p>
         <input type="text" id="remotePeerId" placeholder="Enter Receiver's Peer ID">
         <button onclick="connectToPeer()">Connect</button>
+        <p id="connectionStatus">Not connected</p>
         <input type="file" id="fileInput">
         <button onclick="sendFile()">Send File</button>
+        <p id="fileStatus"></p>
     </div>
     
     <div>
