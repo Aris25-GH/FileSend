@@ -3,248 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Transfer files directly between users without uploading to a server. Supports .ZIP and .RAR files.">
-    <meta name="keywords" content="file transfer, direct file transfer, online file transfer, secure file transfer">
-    <meta name="author" content="Your Name">
-    <title>Direct File Transfer Tool</title>
+    <meta name="description" content="Secure file transfer tool with direct peer-to-peer sharing. No server upload required.">
+    <title>Secure File Transfer Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f8f9fa;
+            text-align: center;
+            margin: 20px;
         }
         .container {
-            max-width: 800px;
-            margin: 20px auto;
+            max-width: 500px;
+            margin: auto;
             padding: 20px;
-            background: white;
             border: 1px solid #ddd;
             border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
         }
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-        .role-selection, .sender-section, .receiver-section, .file-size, .progress-bar, .download-section {
-            margin-bottom: 20px;
-        }
-        label {
-            font-weight: bold;
-            display: block;
-            margin-bottom: 10px;
-        }
-        input[type="file"], input[type="text"], button {
+        input, button {
             width: 100%;
             padding: 10px;
-            margin: 10px 0;
+            margin-top: 10px;
+            border: 1px solid #ddd;
             border-radius: 5px;
-            border: 1px solid #ccc;
         }
-        button {
-            background-color: #007bff;
+        #downloadBtn {
+            background: green;
             color: white;
-            border: none;
-            cursor: pointer;
+            display: none;
         }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .file-size {
-            font-weight: bold;
-        }
-        .progress-bar {
-            background-color: #e9ecef;
-            border-radius: 5px;
-            overflow: hidden;
-        }
-        .progress-bar div {
-            height: 20px;
-            background-color: #007bff;
-            width: 0;
-            transition: width 0.5s;
-        }
-        .download-section {
-            text-align: center;
+        #confirmBtn {
+            display: none;
+            background: blue;
+            color: white;
         }
         .ad-container {
-            text-align: center;
-            margin: 20px 0;
-        }
-        @media (max-width: 600px) {
-            .container {
-                padding: 10px;
-            }
-            h1 {
-                font-size: 24px;
-            }
+            margin-top: 20px;
+            min-height: 100px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Direct File Transfer Tool</h1>
+        <h2>Secure File Transfer</h2>
+        <p>Select your role:</p>
+        <button onclick="setRole('sender')">Sender</button>
+        <button onclick="setRole('receiver')">Receiver</button>
         
-        <!-- Role Selection Section -->
-        <div class="role-selection">
-            <label>Are you the Sender or Receiver?</label>
-            <button onclick="selectSender()">Sender</button>
-            <button onclick="selectReceiver()">Receiver</button>
+        <div id="senderBox" style="display: none;">
+            <input type="text" id="subject" placeholder="Enter Subject Line">
+            <input type="file" id="fileInput" accept=".zip,.rar" onchange="checkInputs()">
+            <button id="generateCodeBtn" onclick="generateCode()" disabled>Generate Code</button>
+            <p id="codeDisplay"></p>
         </div>
 
-        <!-- Sender Section -->
-        <div class="sender-section" style="display: none;">
-            <label for="subject">Subject Line:</label>
-            <input type="text" id="subject" placeholder="Enter subject line">
-            <label for="file-input">Upload File (.ZIP or .RAR):</label>
-            <input type="file" id="file-input" accept=".zip,.rar">
-            <p id="file-error" style="color: red;"></p>
-            <p id="file-size-display"></p>
-            <button onclick="generateCode()">Generate One-Time Code</button>
-            <p id="code-display"></p>
-            <p id="timer-display"></p>
-        </div>
-
-        <!-- Receiver Section -->
-        <div class="receiver-section" style="display: none;">
-            <label for="code-input">Enter One-Time Code:</label>
-            <input type="text" id="code-input" placeholder="Enter one-time code">
-            <button onclick="verifyCode()">Verify Code</button>
-            <p id="subject-display"></p>
-            <p id="receiver-file-size"></p>
-            <button id="confirm-button" style="display: none;" onclick="confirmSubject()">Confirm Subject</button>
-            <button id="download-button" style="display: none;" onclick="downloadFile()">Download File</button>
-        </div>
-
-        <!-- AdSense Ad Unit -->
-        <div class="ad-container">
-            <ins class="adsbygoogle"
-                style="display:block"
-                data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-                data-ad-slot="XXXXXXXXXX"
-                data-ad-format="auto"
-                data-full-width-responsive="true"></ins>
-            <script>
-                (adsbygoogle = window.adsbygoogle || []).push({});
-            </script>
+        <div id="receiverBox" style="display: none;">
+            <input type="text" id="inputCode" placeholder="Enter One-Time Code">
+            <button onclick="validateCode()">Validate Code</button>
+            <p id="subjectDisplay"></p>
+            <button id="confirmBtn" onclick="confirmTransfer()">Confirm</button>
+            <button id="downloadBtn" onclick="downloadFile()">Download File</button>
         </div>
     </div>
 
+    <div class="ad-container">
+        <!-- Google AdSense Code Placeholder -->
+        <script>
+            (adsbygoogle = window.adsbygoogle || []).push({
+                google_ad_client: "YOUR_ADSENSE_CLIENT_ID",
+                enable_page_level_ads: true
+            });
+        </script>
+    </div>
+
     <script>
-        // Global variables
-        let senderFile = null;
-        let oneTimeCode = null;
-        let codeExpiry = null;
-        let subjectLine = null;
-        let timerInterval = null;
+        let role, oneTimeCode = null, file = null, expiration = null, subject = null;
 
-        // Role Selection
-        function selectSender() {
-            document.querySelector('.role-selection').style.display = "none";
-            document.querySelector('.sender-section').style.display = "block";
+        function setRole(selectedRole) {
+            role = selectedRole;
+            document.getElementById('senderBox').style.display = (role === 'sender') ? 'block' : 'none';
+            document.getElementById('receiverBox').style.display = (role === 'receiver') ? 'block' : 'none';
         }
 
-        function selectReceiver() {
-            document.querySelector('.role-selection').style.display = "none";
-            document.querySelector('.receiver-section').style.display = "block";
+        function checkInputs() {
+            const subjectValue = document.getElementById('subject').value;
+            file = document.getElementById('fileInput').files[0];
+            document.getElementById('generateCodeBtn').disabled = !(subjectValue && file);
         }
 
-        // File Upload Validation
-        const fileInput = document.getElementById('file-input');
-        const fileError = document.getElementById('file-error');
-        const fileSizeDisplay = document.getElementById('file-size-display');
-
-        fileInput.addEventListener('change', () => {
-            const file = fileInput.files[0];
-            if (file && !(file.name.endsWith('.zip') || file.name.endsWith('.rar'))) {
-                fileError.innerText = "Please upload a valid .ZIP or .RAR file.";
-                fileInput.value = ""; // Clear the input
-                fileSizeDisplay.innerText = "";
-            } else {
-                fileError.innerText = "";
-                senderFile = file;
-                fileSizeDisplay.innerText = `File Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB`;
-            }
-        });
-
-        // Generate One-Time Code
         function generateCode() {
-            if (!senderFile) {
-                alert("Please upload a file first.");
+            if (!file || !document.getElementById('subject').value) {
+                alert('Please enter a subject and select a file before generating the code.');
                 return;
             }
-
-            subjectLine = document.getElementById('subject').value;
-            if (!subjectLine) {
-                alert("Please enter a subject line.");
-                return;
-            }
-
-            // Generate a random 6-digit code
             oneTimeCode = Math.floor(100000 + Math.random() * 900000);
-            codeExpiry = Date.now() + 60000; // 1 minute expiry
-
-            // Display the code
-            document.getElementById('code-display').innerText = `One-Time Code: ${oneTimeCode}`;
-
-            // Start the countdown timer
-            startTimer();
+            expiration = Date.now() + 120000;
+            subject = document.getElementById('subject').value;
+            sessionStorage.setItem('oneTimeCode', oneTimeCode);
+            sessionStorage.setItem('expiration', expiration);
+            sessionStorage.setItem('subject', subject);
+            document.getElementById('codeDisplay').innerHTML = `Share this code: <strong>${oneTimeCode}</strong> (Expires in 2 min)`;
         }
 
-        // Start the countdown timer
-        function startTimer() {
-            clearInterval(timerInterval); // Clear any existing timer
-            timerInterval = setInterval(() => {
-                const timeLeft = Math.max(0, codeExpiry - Date.now());
-                const secondsLeft = Math.floor(timeLeft / 1000);
-                document.getElementById('timer-display').innerText = `Time Left: ${secondsLeft} seconds`;
+        function validateCode() {
+            const enteredCode = document.getElementById('inputCode').value;
+            const storedCode = sessionStorage.getItem('oneTimeCode');
+            const storedExpiration = parseInt(sessionStorage.getItem('expiration'));
+            const storedSubject = sessionStorage.getItem('subject');
 
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    document.getElementById('timer-display').innerText = "Code Expired!";
-                }
-            }, 1000);
-        }
-
-        // Verify One-Time Code
-        function verifyCode() {
-            const codeInput = document.getElementById('code-input').value;
-            if (!codeInput || codeInput !== oneTimeCode.toString()) {
-                alert("Invalid or expired code.");
-                return;
+            if (enteredCode == storedCode && Date.now() < storedExpiration) {
+                document.getElementById('subjectDisplay').innerHTML = `Subject: ${storedSubject}`;
+                document.getElementById('confirmBtn').style.display = 'block';
+            } else {
+                alert('Invalid or expired code. Please request a new one.');
             }
-
-            if (Date.now() > codeExpiry) {
-                alert("The code has expired. Please ask the sender to generate a new one.");
-                return;
-            }
-
-            // Display the subject line and file size
-            document.getElementById('subject-display').innerText = `Subject: ${subjectLine}`;
-            document.getElementById('receiver-file-size').innerText = `File Size: ${(senderFile.size / (1024 * 1024)).toFixed(2)} MB`;
-            document.getElementById('confirm-button').style.display = "block";
         }
 
-        // Confirm Subject
-        function confirmSubject() {
-            document.getElementById('download-button').style.display = "block";
+        function confirmTransfer() {
+            document.getElementById('downloadBtn').style.display = 'block';
         }
 
-        // Download File
         function downloadFile() {
-            if (!senderFile) {
-                alert("No file available for download.");
+            if (!file) {
+                alert('File is not available for download.');
                 return;
             }
-
-            const url = URL.createObjectURL(senderFile);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = senderFile.name;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            const url = URL.createObjectURL(file);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = file.name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         }
     </script>
 </body>
