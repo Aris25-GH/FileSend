@@ -11,6 +11,8 @@
         let conn;
         let receivedChunks = [];
         let fileMetadata = {};
+        let totalSize = 0;
+        let transferredSize = 0;
 
         function initializePeer() {
             peer = new Peer(undefined, {
@@ -68,11 +70,16 @@
                         link.click();
                         
                         document.getElementById("fileStatus").innerText = `File received successfully!`;
+                        document.getElementById("progressBar").style.width = "100%";
                     } else {
                         fileMetadata = JSON.parse(data);
+                        totalSize = fileMetadata.size;
                     }
                 } else {
                     receivedChunks.push(data);
+                    transferredSize += data.byteLength;
+                    let progress = (transferredSize / totalSize) * 100;
+                    document.getElementById("progressBar").style.width = progress + "%";
                 }
             });
         }
@@ -86,6 +93,8 @@
             if (!file) return alert("Select a file first");
 
             fileMetadata = { name: file.name, type: file.type, size: file.size };
+            totalSize = file.size;
+            transferredSize = 0;
             conn.send(JSON.stringify(fileMetadata));
             document.getElementById("fileStatus").innerText = "Sending file...";
 
@@ -97,6 +106,9 @@
                 if (conn.open) {
                     conn.send(reader.result);
                     offset += chunkSize;
+                    transferredSize += reader.result.byteLength;
+                    let progress = (transferredSize / totalSize) * 100;
+                    document.getElementById("progressBar").style.width = progress + "%";
                     if (offset < file.size) {
                         readNextChunk();
                     } else {
@@ -131,6 +143,9 @@
             <input type="file" id="fileInput" class="w-full p-2 border rounded">
             <button onclick="sendFile()" class="w-full mt-2 bg-green-500 text-white py-2 rounded">Send File</button>
             <p id="fileStatus" class="text-sm text-gray-600 mt-2"></p>
+            <div class="w-full bg-gray-200 rounded h-4 mt-2">
+                <div id="progressBar" class="h-4 bg-blue-500 rounded" style="width: 0%;"></div>
+            </div>
         </div>
 
         <div class="mb-4">
